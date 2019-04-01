@@ -1,0 +1,32 @@
+#!/bin/bash
+# validAlphaNum -- Ensures that input consists only of alphabetical and numeric
+# characters.
+
+validAlphaNum() {
+    # Validate arg: returns 0 if all upper+lower+digits; 1 otherwise.
+
+    # Remove all unacceptable characters.
+    # shellcheck disable=SC2001
+    valid_chars="$(echo "$1" | sed -e 's/[^[:alnum:]]//g')"
+
+    if [ "$valid_chars" = "$1" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    echo -n "Enter input: "
+    read -r input
+
+    # Input validation
+    if ! validAlphaNum "$input"; then
+        echo "Please enter only letters and numbers." >&2
+        exit 1
+    else
+        echo "Input is valid."
+    fi
+
+    exit 0
+fi

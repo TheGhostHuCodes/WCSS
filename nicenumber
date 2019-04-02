@@ -1,0 +1,82 @@
+#!/bin/bash
+# nicenumber -- Given a number, show it in comma-separated form. Expects DD
+# (decimal point delimiter) and TD (thousands delimiter) to be instantiated.
+# Instantiates nicenum or, if a second arg is specified, the output is echoed
+# to stdout.
+
+nicenumber() {
+    # Note that we assume that '.' is the decimal separator in the INPUT value
+    # to this script. The decimal separator in the output value is '.' unless
+    # specified by the user with the -d flag.
+
+    # Ensure input decimal separator is the same as the user requested
+    # separator.
+    # shellcheck disable=SC2001
+    separator="$(echo "$1" | sed 's/[[:digit:]]//g')"
+    if [ -n "$separator" ] && [ "$separator" != "$DD" ]; then
+        echo "$0: Unknown decimal separator $separator encountered." >&2
+        exit 1
+    fi
+
+    # Left of the decimal
+    integer=$(echo "$1" | cut "-d$DD" -f1)
+    # Right of the decimal
+    decimal=$(echo "$1" | cut "-d$DD" -f2)
+    # Check if the number has more than the integer part.
+    if [ "$decimal" != "$1" ]; then
+        # There is a fractional part, so let's include it.
+        result="${DD:= '.'}$decimal"
+    fi
+
+    thousands=$integer
+
+    while [ "$thousands" -gt 999 ]; do
+        # Three least significant digits.
+        remainder=$((thousands % 1000))
+
+        # We need "remainder to be three digits. Do we need to add zeros?
+        # Leftpad zeros up to 3 digits.
+        while [ ${#remainder} -lt 3 ]; do
+            remainder="0$remainder"
+        done
+
+        # Builds right to left
+        result="${TD:=","}${remainder}${result}"
+        # To left of remainder, if any.
+        thousands=$((thousands / 1000))
+    done
+
+    nicenum="${thousands}${result}"
+
+    if [ -n "$2" ]; then
+        echo "$nicenum"
+    fi
+}
+
+# Decimal point delimiter, to separate whole and fractional values.
+DD="."
+# Thousands delimiter, to separate every three digits.
+TD=","
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    while getopts "d:t:" opt; do
+        case $opt in
+        d) DD="$OPTARG" ;;
+        t) TD="$OPTARG" ;;
+        *) exit 1 ;;
+        esac
+    done
+    shift $((OPTIND - 1))
+
+    # Input validation.
+    if [ $# -eq 0 ]; then
+        echo "Usage: $(basename "$0") [-d c] [-t c] number"
+        echo "  -d specifies the decimal point delimiter"
+        echo "  -t specifies the thousands delimiter"
+        exit 0
+    fi
+
+    # Second argument forces nicenumber to "echo" output.
+    nicenumber "$1" 1
+    exit 0
+fi
